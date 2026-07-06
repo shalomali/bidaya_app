@@ -1,0 +1,76 @@
+{
+  "functions": [
+    {
+      "codebase": "default",
+      "source": "functions",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "!**/*.{js,json,png,jpg,jpeg,gif,webp,html,css,svg,wasm}",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Clear-Site-Data",
+            "value": "\"*\""
+          }
+        ]
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bidayaapp-c770f",
+          "appId": "1:239001759258:android:24c2437e56c705ade8eba3",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bidayaapp-c770f",
+          "configurations": {
+            "android": "1:239001759258:android:24c2437e56c705ade8eba3",
+            "ios": "1:239001759258:ios:6bf2dc115c7ed9e2e8eba3",
+            "macos": "1:239001759258:ios:6bf2dc115c7ed9e2e8eba3",
+            "web": "1:239001759258:web:ce1365aa2e71f5e9e8eba3",
+            "windows": "1:239001759258:web:9c67691968823588e8eba3"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "project_info": {
+    "project_number": "239001759258",
+    "project_id": "bidayaapp-c770f",
+    "storage_bucket": "bidayaapp-c770f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:239001759258:android:95af1c40f191d18ee8eba3",
+        "android_client_info": {
+          "package_name": "bidaya.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZ1aP32-w_wbv_Q-iSGJY2qEhH6i1LCCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "239001759258-ns0hcqoapl1r3opjlku8vgtgihf066e5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bidayaApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:239001759258:android:24c2437e56c705ade8eba3",
+        "android_client_info": {
+          "package_name": "com.example.bidaya_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZ1aP32-w_wbv_Q-iSGJY2qEhH6i1LCCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "239001759258-ns0hcqoapl1r3opjlku8vgtgihf066e5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bidayaApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:239001759258:android:10a2cd16dee07963e8eba3",
+        "android_client_info": {
+          "package_name": "com.zuniques.bidaya"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZ1aP32-w_wbv_Q-iSGJY2qEhH6i1LCCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "239001759258-h6c1orc3l6mts4bgv47dsaoscd3sm1ln.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "239001759258-ns0hcqoapl1r3opjlku8vgtgihf066e5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bidayaApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

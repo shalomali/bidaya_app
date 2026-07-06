@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Users collection: Only the user can read/write their own identity doc
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 2. Profiles: Read by all logged-in users; Write only by owner
+    match /student_profiles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+    match /startup_profiles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // 3. Opportunities: Read by all; Write only by the startup that owns it
+    match /opportunities/{opportunityId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.startupId == request.auth.uid;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.startupId ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['filledSlots', 'status'])
+      );
+      allow delete: if request.auth.uid == resource.data.startupId;
+    }
+    
+    // 4. Applications: Read by student or startup; Create by student; Update by both
+    match /applications/{applicationId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+                    request.resource.data.studentId == request.auth.uid;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.studentId || 
+        request.auth.uid == resource.data.startupId
+      );
+      allow delete: if request.auth.uid == resource.data.studentId || 
+                    request.auth.uid == resource.data.startupId;
+    }
+    
+    // 5. Notifications: Only the recipient can read/write
+    match /notifications/{notificationId} {
+      allow read, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null; 
+    }
+
+    // 6. AI Matching Results: 
+    match /ai_matching_results/{resultId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.startupId
+      );
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.startupId
+      );
+    }
+  }
+}

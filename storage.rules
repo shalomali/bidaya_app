@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // CVs: Owner can upload/read/delete. 
+    // Startups/Others use the tokenized 'cvUrl' for viewing (bypasses rules).
+    match /cvs/{userId}/{allPaths=**} {
+      allow write, delete: if request.auth.uid == userId;
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'startup'
+      );
+    }
+    
+    // Logos/Signatures
+    match /startup_logos/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Default: allow read to all authenticated, write to none
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
