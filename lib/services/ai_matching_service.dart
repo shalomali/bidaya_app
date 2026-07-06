@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/student_profile_model.dart';
@@ -116,5 +115,32 @@ class AIMatchingService {
     );
   }
 
+  Future<ScanResult> scanCvAndPortfolio(String studentId) async {
+    final callable = _functions.httpsCallable('scanCvAndPortfolio');
+    final response = await callable.call({'studentId': studentId});
+    final data = response.data as Map<String, dynamic>;
+
+    final rawSkills = data['skills'] as Map<dynamic, dynamic>? ?? {};
+    final skills = rawSkills.map((key, value) => MapEntry(key.toString(), (value as num).toDouble()));
+
+    return ScanResult(
+      skills: skills,
+      hiddenSignals: List<String>.from(data['hidden_signals'] ?? []),
+      profileCompleteness: (data['profile_completeness_pct'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   void clearCache() => _cache.clear();
+}
+
+class ScanResult {
+  final Map<String, double> skills;
+  final List<String> hiddenSignals;
+  final int profileCompleteness;
+
+  const ScanResult({
+    required this.skills,
+    required this.hiddenSignals,
+    required this.profileCompleteness,
+  });
 }

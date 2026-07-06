@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../services/database_service.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/ai_matching_service.dart';
 import '../../../models/student_profile_model.dart';
 import '../../../core/ui_helper.dart';
 import '../../../core/theme.dart';
@@ -35,6 +36,8 @@ class _EditStudentProfileScreenState extends State<EditStudentProfileScreen> {
   String? _cvFileName;
   String? _cvFileType; // New
   String? _existingCvUrl;
+  bool _isScanning = false;
+  ScanResult? _scanResult;
 
   final List<String> _availableSkills = [
     'Flutter/Dart', 'React/Next.js', 'Node.js', 'Python', 'Java', 'Kotlin', 'Swift',
@@ -422,6 +425,10 @@ class _EditStudentProfileScreenState extends State<EditStudentProfileScreen> {
                 ),
               ],
             )),
+            const SizedBox(height: 24),
+            _buildSectionHeader('AI CV & Portfolio Scanner'),
+            const SizedBox(height: 12),
+            _buildScannerSection(),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -537,6 +544,271 @@ class _EditStudentProfileScreenState extends State<EditStudentProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _scanCvAndPortfolio() async {
+    final user = context.read<User?>();
+    if (user == null) return;
+
+    if (_existingCvUrl == null && _cvBytes == null) {
+      UIHelper.showError(context, 'Please upload a CV first before scanning.');
+      return;
+    }
+
+    setState(() {
+      _isScanning = true;
+      _scanResult = null;
+    });
+
+    try {
+      String? cvUrl = _existingCvUrl;
+      if (_cvBytes != null && _cvFileName != null) {
+        final String contentType = _cvFileType == 'pdf' ? 'application/pdf' : 'image/jpeg';
+        cvUrl = await StorageService().uploadCV(user.uid, _cvBytes!, _cvFileName!, contentType: contentType);
+        if (cvUrl != null) {
+          _existingCvUrl = cvUrl;
+          _cvBytes = null;
+        }
+      }
+
+      if (cvUrl == null) {
+        throw 'Please upload a valid CV first.';
+      }
+
+      final currentProfile = StudentProfileModel(
+        uid: user.uid,
+        name: InputSanitizer.sanitizeText(_nameController.text),
+        university: InputSanitizer.sanitizeText(_universityController.text),
+        major: InputSanitizer.sanitizeText(_majorController.text),
+        email: user.email ?? '',
+        skills: {for (var e in _selectedSkills) e['name'] as String: e['level'] as double},
+        cvUrl: cvUrl,
+        cvFileName: _cvFileName ?? (_existingCvUrl != null ? 'Existing_CV.pdf' : null),
+        cvFileType: _cvFileType,
+        bio: _bioController.text.trim().isEmpty ? null : InputSanitizer.sanitizeText(_bioController.text),
+        portfolioUrl: InputSanitizer.sanitizeUrl(_portfolioController.text),
+        bookmarks: [],
+      );
+      await DatabaseService().updateStudentProfile(currentProfile);
+
+      final result = await AIMatchingService().scanCvAndPortfolio(user.uid);
+      await _loadExistingProfile();
+
+      if (mounted) {
+        setState(() {
+          _scanResult = result;
+          _isScanning = false;
+        });
+        UIHelper.showSuccess(context, 'CV and Portfolio scanned successfully! Skills merged.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isScanning = false);
+        UIHelper.showError(context, 'Scan failed: $e');
+      }
+    }
+  }
+
+  Widget _buildScannerSection() {
+    if (_isScanning) {
+      return _buildCard(
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'AI is analyzing your CV and Portfolio...',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        _buildCard(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Let Gemini scan your uploaded CV and portfolio URL to automatically extract your skills, proficiency levels, and hidden professional signals.',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _scanCvAndPortfolio,
+                icon: const Icon(Icons.psychology_outlined, color: Colors.white),
+                label: Text(
+                  'Scan CV & Portfolio',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_scanResult != null) ...[
+          const SizedBox(height: 16),
+          _buildCard(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'AI Scan Results',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_outline, color: Colors.green[700], size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Merged Successfully',
+                            style: GoogleFonts.manrope(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: CircularProgressIndicator(
+                              value: _scanResult!.profileCompleteness / 100.0,
+                              strokeWidth: 5,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                            ),
+                          ),
+                          Center(
+                            child: Text(
+                              '${_scanResult!.profileCompleteness}%',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Profile Completeness',
+                            style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'AI-generated estimation based on your qualifications and credentials.',
+                            style: GoogleFonts.manrope(fontSize: 11, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (_scanResult!.skills.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Extracted Skills:',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _scanResult!.skills.entries.map((entry) {
+                      return Chip(
+                        label: Text(
+                          '${entry.key} (${entry.value.round()}%)',
+                          style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                        backgroundColor: AppTheme.primary.withOpacity(0.08),
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                if (_scanResult!.hiddenSignals.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Hidden Portfolio Signals Found:',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._scanResult!.hiddenSignals.map((signal) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.auto_awesome, color: Colors.amber[700], size: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              signal,
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

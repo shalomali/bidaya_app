@@ -85,5 +85,33 @@ service cloud.firestore {
         request.auth.uid == resource.data.startupId
       );
     }
+
+    // 7. External Jobs: Read-only for authenticated users, write blocked for clients
+    match /external_jobs/{jobId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 8. External Job Matches: Only the student can read their matches, write blocked for clients
+    match /external_job_matches/{matchId} {
+      allow read: if request.auth != null && resource.data.studentId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // 9. CV Enhancements: Student can read/write their own enhancements
+    match /cv_enhancements/{enhancementId} {
+      allow read, write: if request.auth != null && (
+        (resource == null && request.resource.data.studentId == request.auth.uid) ||
+        (resource != null && resource.data.studentId == request.auth.uid && request.resource.data.studentId == request.auth.uid)
+      );
+    }
+
+    // 10. Startup Plans: Startup can read/write their own plans
+    match /startup_plans/{planId} {
+      allow read, write: if request.auth != null && (
+        (resource == null && request.resource.data.startupId == request.auth.uid) ||
+        (resource != null && resource.data.startupId == request.auth.uid && request.resource.data.startupId == request.auth.uid)
+      );
+    }
   }
 }
