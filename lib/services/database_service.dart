@@ -236,18 +236,26 @@ class DatabaseService {
 
   // Application methods
   Future<void> applyToOpportunity(ApplicationModel application) async {
+    final docId = '${application.opportunityId}_${application.studentId}';
+    final docRef = _applicationsCollection.doc(docId);
+
     // Prevent duplicate applications
-    final existing = await _applicationsCollection
-        .where('opportunityId', isEqualTo: application.opportunityId)
-        .where('studentId', isEqualTo: application.studentId)
-        .get();
-        
-    if (existing.docs.isNotEmpty) {
+    final existing = await docRef.get();
+    if (existing.exists) {
       throw 'You have already applied for this opportunity.';
     }
 
-    final docRef = await _applicationsCollection.add(application.toMap());
-    debugPrint('DatabaseService: Created application ${docRef.id}');
+    await docRef.set(application.toMap());
+    debugPrint('DatabaseService: Created application $docId');
+
+    // Track connection on student profile for CV access authorization
+    try {
+      await _studentProfilesCollection.doc(application.studentId).update({
+        'appliedStartups': FieldValue.arrayUnion([application.startupId])
+      });
+    } catch (e) {
+      debugPrint('Warning: Could not update appliedStartups on student profile: $e');
+    }
     
     // Fetch opportunity title for notification
     String oppTitle = 'New Opportunity';
@@ -268,7 +276,7 @@ class DatabaseService {
       createdAt: DateTime.now(),
       type: 'new_applicant',
       relatedId: application.opportunityId,
-      subId: docRef.id,
+      subId: docId,
       role: 'startup',
     ));
     

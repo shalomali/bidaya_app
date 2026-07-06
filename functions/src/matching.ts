@@ -11,15 +11,15 @@ export const matchingFlow = ai.defineFlow(
     name: 'matchingFlow',
     inputSchema: z.object({
       student: z.object({
-        name: z.string(),
-        major: z.string(),
-        skills: z.record(z.number()),
+        name: z.string().max(100),
+        major: z.string().max(100),
+        skills: z.record(z.string().max(50), z.number().min(0).max(100)),
       }),
       opportunity: z.object({
-        title: z.string(),
-        description: z.string(),
-        requiredSkills: z.array(z.string()),
-        duration: z.string(),
+        title: z.string().max(200),
+        description: z.string().max(2000),
+        requiredSkills: z.array(z.string().max(50)).max(20),
+        duration: z.string().max(100),
       }),
     }),
     outputSchema: z.object({

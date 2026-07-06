@@ -2,6 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper to check if a student has an accepted/active application
+    function hasAcceptedApplication(opportunityId, studentId) {
+      let appPath = /databases/$(database)/documents/applications/$(opportunityId + '_' + studentId);
+      return exists(appPath) && get(appPath).data.status in ['accepted', 'active', 'review_pending', 'completed'];
+    }
+
+    // Helper to check relationship for notifications
+    function hasApplicationRelationship(senderId, recipientId, opportunityId) {
+      let appAsSender = /databases/$(database)/documents/applications/$(opportunityId + '_' + senderId);
+      let appAsRecipient = /databases/$(database)/documents/applications/$(opportunityId + '_' + recipientId);
+      return (exists(appAsSender) && get(appAsSender).data.startupId == recipientId) ||
+             (exists(appAsRecipient) && get(appAsRecipient).data.startupId == senderId);
+    }
+
     // 1. Users collection: Only the user can read/write their own identity doc
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -22,29 +36,41 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.startupId == request.auth.uid;
       allow update: if request.auth != null && (
-        request.auth.uid == resource.data.startupId ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['filledSlots', 'status'])
+        request.auth.uid == resource.data.startupId || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['filledSlots', 'status']) &&
+          hasAcceptedApplication(opportunityId, request.auth.uid)
+        )
       );
       allow delete: if request.auth.uid == resource.data.startupId;
     }
     
-    // 4. Applications: Read by student or startup; Create by student; Update by both
+    // 4. Applications: Read by student or startup; Create by student; Update by both (with role restrictions)
     match /applications/{applicationId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && 
-                    request.resource.data.studentId == request.auth.uid;
+                    request.resource.data.studentId == request.auth.uid &&
+                    applicationId == request.resource.data.opportunityId + '_' + request.auth.uid;
       allow update: if request.auth != null && (
-        request.auth.uid == resource.data.studentId || 
-        request.auth.uid == resource.data.startupId
+        (
+          request.auth.uid == resource.data.studentId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+          request.resource.data.status in ['active', 'review_pending', 'declined']
+        ) || (
+          request.auth.uid == resource.data.startupId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endorsementLetter', 'certificateUrl', 'updatedAt'])
+        )
       );
       allow delete: if request.auth.uid == resource.data.studentId || 
                     request.auth.uid == resource.data.startupId;
     }
     
-    // 5. Notifications: Only the recipient can read/write
+    // 5. Notifications: Only the recipient can read/write, sender must have relationship to create
     match /notifications/{notificationId} {
       allow read, update, delete: if request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null; 
+      allow create: if request.auth != null && (
+        request.auth.uid == request.resource.data.userId ||
+        hasApplicationRelationship(request.auth.uid, request.resource.data.userId, request.resource.data.relatedId)
+      ); 
     }
 
     // 6. AI Matching Results: 

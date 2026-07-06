@@ -8,7 +8,7 @@ service firebase.storage {
       allow write, delete: if request.auth.uid == userId;
       allow read: if request.auth != null && (
         request.auth.uid == userId || 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'startup'
+        request.auth.uid in firestore.get(/databases/(default)/documents/student_profiles/$(userId)).data.get('appliedStartups', [])
       );
     }
     
